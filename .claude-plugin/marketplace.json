@@ -1,0 +1,5 @@
+{
+  "name": "helper-desk",
+  "owner": { "name": "jorge28mera" },
+  "plugins": [{ "name": "helper-desk", "source": "./" }]
+}
