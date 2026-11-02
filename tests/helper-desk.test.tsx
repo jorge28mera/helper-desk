@@ -66,6 +66,10 @@ test('a helper gets a card with its latest step', async ($, on) => {
 
 test('a to-do list fills the band above the prompt', async ($, on) => {
   on('tool.call', () => ({ result: {} }))
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box />
+  })
 
   await $.tool.call({
     tool: 'TodoWrite',
@@ -87,6 +91,10 @@ test('a to-do list fills the band above the prompt', async ($, on) => {
 
 test('the desktop task list advances the band', async ($, on) => {
   on('tool.call', () => ({ result: {} }))
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box />
+  })
 
   await $.tool.call({
     tool: 'mcp__ccd_turn__update_plan',
@@ -107,6 +115,10 @@ test('the desktop task list advances the band', async ($, on) => {
 
 test('a message sent mid-turn keeps the band title', async ($, on) => {
   on('tool.call', () => ({ result: {} }))
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box />
+  })
   on('prompt.submit', ($, e) => ({ text: e.text, context: [] }))
 
   await $.prompt.submit({ text: 'build the thumbnail set', asUser: true })
@@ -123,5 +135,50 @@ test('a message sent mid-turn keeps the band title', async ($, on) => {
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
   expect((await ui.find({ type: 'Text', text: /thumbnail/ }))?.text).toBe('Build the thumbnail set')
+  await ui.unmount()
+})
+
+test('the band keeps what other mods draw above the prompt', async ($, on) => {
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>Warm · cold in 41:20</Text>
+  })
+
+  await $.tool.call({
+    tool: 'mcp__ccd_turn__update_plan',
+    items: [
+      { content: 'One', status: 'in_progress' },
+      { content: 'Two', status: 'pending' },
+    ],
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Text', text: /\/2/ }))?.text).toBe('0/2')
+  expect((await ui.find({ type: 'Text', text: /cold in/ }))?.text).toBe('Warm · cold in 41:20')
+  await ui.unmount()
+})
+
+test('wrapping up a turn clears the band', async ($, on) => {
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>beneath</Text>
+  })
+
+  await $.tool.call({
+    tool: 'mcp__ccd_turn__update_plan',
+    items: [
+      { content: 'One', status: 'completed' },
+      { content: 'Two', status: 'in_progress' },
+    ],
+  })
+  await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'Done.' })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(await ui.find({ type: 'Text', text: /\/2/ })).toBeUndefined()
+  expect((await ui.find({ type: 'Text', text: 'beneath' }))?.text).toBe('beneath')
   await ui.unmount()
 })

@@ -6,6 +6,8 @@ import type { Helper, Task, TaskStatus, Tasks, Totals } from '../types'
 const PANE = 'helper-desk'
 const BAND_COLOR = '#8b5cf6'
 const PLAN_TOOL = 'mcp__ccd_turn__update_plan'
+// The desktop app's wrap-up checks off whatever is left of the task list.
+const WRAP_TOOL = 'mcp__ccd_turn__wrap_up'
 
 // Change a tag when that value's fields change: it declines what an earlier
 // version stored, which outlives a reload.
@@ -579,6 +581,12 @@ export const register: Register = on => {
           await update($, isBandHidden, () => false)
         }
       }
+    } else if (e.tool === WRAP_TOOL) {
+      await update($, tasks, current =>
+        current === null
+          ? current
+          : { ...current, items: current.items.map((task): Task => ({ ...task, status: 'completed' })) },
+      )
     }
 
     const ran = await next(e)
@@ -630,18 +638,20 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    // What other mods draw here stays, under the band, so the band never hides them.
+    const below = await next(e)
     const current = await read($, tasks)
     const isHidden = await read($, isBandHidden)
 
     if (e.props.hasSurvey || current === null || isHidden) {
-      return next(e)
+      return below
     }
 
     const total = current.items.length
     const done = current.items.filter(t => t.status === 'completed').length
 
     if (total === 0 || done === total) {
-      return next(e)
+      return below
     }
 
     const ui = $.ui.resolve(e)
@@ -652,52 +662,55 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="column">
-        <Box flexDirection="row" alignItems="center" justifyContent="space-between">
-          <Box flexDirection="row" flexShrink={1}>
-            <Text color={BAND_COLOR}>● </Text>
-            <Text bold>{short(current.title, 56)}</Text>
+        <Box flexDirection="column">
+          <Box flexDirection="row" alignItems="center" justifyContent="space-between">
+            <Box flexDirection="row" flexShrink={1}>
+              <Text color={BAND_COLOR}>● </Text>
+              <Text bold>{short(current.title, 56)}</Text>
+            </Box>
+            <Button
+              key="hide"
+              label="×"
+              onPress={() => update($, isBandHidden, () => true)}
+            />
           </Box>
-          <Button
-            key="hide"
-            label="×"
-            onPress={() => update($, isBandHidden, () => true)}
-          />
-        </Box>
-        <Box flexDirection="row" alignItems="center">
-          <Box key="band-bar" flexShrink={0} marginRight={1}>
-            {Svg ? (
-              <Svg
-                source={segments.source}
-                alt={`${done} of ${total} done`}
-                width={segments.width}
-                height={segments.height}
-              />
-            ) : (
-              <Text>
-                {current.items.map(task =>
-                  task.status === 'completed' ? (
-                    <Text color={BAND_COLOR}>▰</Text>
-                  ) : task.status === 'in_progress' ? (
-                    <Text color="#c4b5fd" bold>▰</Text>
-                  ) : (
-                    <Text dimColor>▱</Text>
-                  ),
-                )}
+          <Box flexDirection="row" alignItems="center">
+            <Box key="band-bar" flexShrink={0} marginRight={1}>
+              {Svg ? (
+                <Svg
+                  source={segments.source}
+                  alt={`${done} of ${total} done`}
+                  width={segments.width}
+                  height={segments.height}
+                />
+              ) : (
+                <Text>
+                  {current.items.map(task =>
+                    task.status === 'completed' ? (
+                      <Text color={BAND_COLOR}>▰</Text>
+                    ) : task.status === 'in_progress' ? (
+                      <Text color="#c4b5fd" bold>▰</Text>
+                    ) : (
+                      <Text dimColor>▱</Text>
+                    ),
+                  )}
+                </Text>
+              )}
+            </Box>
+            <Box flexShrink={0}>
+              <Text dimColor>
+                {done}/{total}
               </Text>
+            </Box>
+            {working !== undefined && (
+              <Box flexShrink={1} marginLeft={1}>
+                <Text dimColor>· Now: </Text>
+                <Text>{short(working.active, 60)}</Text>
+              </Box>
             )}
           </Box>
-          <Box flexShrink={0}>
-            <Text dimColor>
-              {done}/{total}
-            </Text>
-          </Box>
-          {working !== undefined && (
-            <Box flexShrink={1} marginLeft={1}>
-              <Text dimColor>· Now: </Text>
-              <Text>{short(working.active, 60)}</Text>
-            </Box>
-          )}
         </Box>
+        {below ? below : null}
       </Box>
     )
   })

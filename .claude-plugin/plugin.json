@@ -1,6 +1,6 @@
 {
   "name": "helper-desk",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "A task progress band above the prompt and a side pane showing each subagent's step, tokens, cost and time",
   "types": "./types/index.d.ts"
 }
