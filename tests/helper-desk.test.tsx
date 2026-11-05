@@ -59,6 +59,10 @@ test('a helper gets a card with its latest step', async ($, on) => {
     expect((await ui.find({ type: 'Text', text: 'Time' }))?.text).toBe('Time')
     if (surface === 'desktop') {
       expect(await ui.find({ key: 'bar-a1' })).toBeTruthy()
+    } else {
+      // The terminal draws no SVG, so the crab is block characters.
+      expect(await ui.find({ type: 'Svg' })).toBeFalsy()
+      expect(await ui.find({ type: 'Text', text: /▝▜█████▛▘/ })).toBeTruthy()
     }
     await ui.unmount()
   }
@@ -85,6 +89,9 @@ test('a to-do list fills the band above the prompt', async ($, on) => {
 
     expect((await ui.find({ type: 'Text', text: /\/3/ }))?.text).toBe('1/3')
     expect((await ui.find({ type: 'Text', text: /script/ }))?.text).toBe('Writing the script')
+    if (surface === 'terminal') {
+      expect(await ui.find({ type: 'Svg' })).toBeFalsy()
+    }
     await ui.unmount()
   }
 })

@@ -656,7 +656,8 @@ export const register: Register = on => {
 
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
-    const Svg = 'Svg' in ui ? ui.Svg : null
+    // The terminal's table names Svg but draws it as nothing, so it gets text instead.
+    const Svg = e.surface !== 'terminal' && 'Svg' in ui ? ui.Svg : null
     const working = current.items.find(t => t.status === 'in_progress')
     const segments = segmentsSvg(current.items, BAND_COLOR)
 
@@ -724,9 +725,9 @@ export const register: Register = on => {
     const finished = list.filter(helper => helper.status !== 'running')
     const width = Math.max(8, e.props.bodyColumns - 6)
 
-    // Only desktop and VS Code draw SVG; elsewhere the crab and bar are text.
+    // Only desktop and VS Code draw SVG; the terminal's table names Svg but draws nothing, so it gets text.
     const ui = $.ui.resolve(e)
-    const Svg = 'Svg' in ui ? ui.Svg : null
+    const Svg = e.surface !== 'terminal' && 'Svg' in ui ? ui.Svg : null
 
     const crab = (helper: Helper) => {
       const color = HUES[helper.hue] ?? '#e8604c'
